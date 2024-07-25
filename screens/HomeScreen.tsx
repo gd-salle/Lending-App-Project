@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Image, Alert } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import { useNavigation } from '@react-navigation/native';
 import AuthDialog from '../components/AuthenticationDialog';
 import AdminToolsDialog from '../components/AdminToolsDialog';
+import AccountCreationDialog from '../components/AccountCreationDialog';
 import ExportConfirmationDialog from '../components/ExportConfirmationDialog';
-import { exportDataToFile, importDataFromFile } from '../services/FileService';
+import CollectionDateDialog from '../components/CollectionDateDialog';
+import { handleImport } from '../services/FileService';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { getConsultantInfo } from '../services/UserService';
+import { fetchAllPeriods, fetchLatestPeriodDate } from '../services/CollectiblesService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -19,21 +21,61 @@ type RootStackParamList = {
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen: React.FC = () => {
-  const [agent, setAgent] = useState('');
+  const [consultant, setConsultant] = useState('');
   const [area, setArea] = useState('');
   const [collectionDate, setCollectionDate] = useState('');
   const [isDialogVisible, setDialogVisible] = useState(false);
   const [authAction, setAuthAction] = useState<string | null>(null);
   const [isAdminToolsVisible, setAdminToolsVisible] = useState(false);
   const [isExportConfirmationVisible, setExportConfirmationVisible] = useState(false);
+  const [isAccountCreationVisible, setAccountCreationVisible] = useState(false);
+  const [isCollectionDateDialogVisible, setCollectionDateDialogVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<() => void>(() => {});
 
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
+  useEffect(() => {
+    const fetchConsultantInfo = async () => {
+      try {
+        const consultantInfo = await getConsultantInfo();
+        if (consultantInfo) {
+          setConsultant(consultantInfo.name);
+          setArea(consultantInfo.area);
+        }
+      } catch (error) {
+        console.error('Failed to fetch consultant info:', error);
+      }
+    };
+
+    const fetchAndSetLatestPeriodDate = async () => {
+      try {
+        const latestDate = await fetchLatestPeriodDate();
+        if (latestDate) {
+          setCollectionDate(latestDate);
+        }
+      } catch (error) {
+        console.error('Failed to fetch latest period date:', error);
+      }
+    };
+
+    fetchConsultantInfo();
+    fetchAndSetLatestPeriodDate();
+  }, []);
+
   const handleStartCollection = () => {
-    setAuthAction('agent');
+    setAuthAction('consultant');
     setDialogVisible(true);
   };
 
+  const handleTest = async () => {
+    try {
+      const periodData = await fetchAllPeriods();
+      console.log('Period Data:', periodData);
+    } catch (error) {
+      console.error('Error fetching period data:', error);
+    }
+  }
+  
   const handleAdminTools = () => {
     setAuthAction('admin');
     setDialogVisible(true);
@@ -47,50 +89,15 @@ const HomeScreen: React.FC = () => {
     // Perform necessary actions based on authentication
     if (authAction === 'admin') {
       setAdminToolsVisible(true);
-    } else if (authAction === 'agent') {
-      navigation.navigate('DataEntry');
+    } else if (authAction === 'consultant') {
+      navigation.navigate('Collectibles');
     }
     setDialogVisible(false);
   };
 
-  const handleImport = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'text/plain',
-      copyToCacheDirectory: true
-    });
-
-    const assets = result.assets;
-    if (!assets) return;
-
-    const file = assets[0];
-    const txtFile = {
-      name: file.name,
-      uri: file.uri,
-      mimetype: file.mimeType,
-      size: file.size,
-    };
-
-    try {
-      if (txtFile.mimetype === 'text/plain') {
-        const content = await FileSystem.readAsStringAsync(txtFile.uri);
-        console.log('File content:', content);
-
-        const success = await importDataFromFile(content);
-        if (success) {
-          Alert.alert('Success', 'Collectibles Successfully Imported');
-        } else {
-          Alert.alert('Error', 'Failed to import data');
-        }
-      }
-    } catch (e) {
-      console.log(e);
-      Alert.alert('Error', 'Failed to read file');
-    }
-  };
-
   const handleExport = async () => {
     try {
-      const fileUri = await exportDataToFile();
+      const fileUri = true;
       Alert.alert('Success', `Data exported to ${fileUri}`);
     } catch (e) {
       console.log(e);
@@ -107,15 +114,43 @@ const HomeScreen: React.FC = () => {
     setExportConfirmationVisible(false);
   };
 
+  const handleAccountCreation = () => {
+    setAdminToolsVisible(false);
+    setTimeout(() => {
+      setAccountCreationVisible(true);
+    }, 300);
+  };
+
+  const handleAccountCreationClose = () => {
+    setAccountCreationVisible(false);
+  };
+
+  const handleAccountCreationConfirm = (consultantName: string, area: string, username: string, password: string) => {
+    // Handle account creation logic
+    console.log('New Account:', { consultantName, area, username, password });
+    setAccountCreationVisible(false);
+  };
+
+  const handleCollectionDateDialogClose = () => {
+    setCollectionDateDialogVisible(false);
+  };
+
+  const handleCollectionDateDialogConfirm = (date: string) => {
+    setCollectionDate(date);
+    setCollectionDateDialogVisible(false);
+    pendingAction();
+  };
+
   return (
     <View style={styles.container}>
       <Image source={require('../assets/logo.png')} style={styles.logo} />
       <Text style={styles.title}>EXTRA CASH LENDING CORP.</Text>
       <TextInput
-        label="Agent"
-        value={agent}
-        onChangeText={setAgent}
+        label="Consultant"
+        value={consultant}
+        onChangeText={setConsultant}
         mode="outlined"
+        editable={false}
         style={styles.input}
       />
       <TextInput
@@ -123,6 +158,7 @@ const HomeScreen: React.FC = () => {
         value={area}
         onChangeText={setArea}
         mode="outlined"
+        editable={false}
         style={styles.input}
       />
       <TextInput
@@ -130,6 +166,7 @@ const HomeScreen: React.FC = () => {
         value={collectionDate}
         onChangeText={setCollectionDate}
         mode="outlined"
+        editable={false}
         style={styles.input}
       />
       <Button
@@ -148,17 +185,34 @@ const HomeScreen: React.FC = () => {
       >
         ADMIN TOOLS
       </Button>
+      <Button
+        mode="outlined"
+        onPress={handleTest}
+        style={styles.adminButton}
+        labelStyle={styles.adminButtonText}
+      >
+        TEST
+      </Button>
       <AuthDialog 
         visible={isDialogVisible} 
         onClose={handleDialogClose} 
         onConfirm={handleDialogConfirm} 
-        isAgentAuth={authAction === 'agent'} 
+        isConsultantAuth={authAction === 'consultant'} 
       />
       <AdminToolsDialog
         visible={isAdminToolsVisible}
         onClose={() => setAdminToolsVisible(false)}
-        onImport={handleImport}
+        onImport={() => {
+          setPendingAction(() => () => handleImport(collectionDate));
+          setCollectionDateDialogVisible(true);
+        }}
         onExport={() => setExportConfirmationVisible(true)}
+        onCreateAccount={handleAccountCreation}
+      />
+      <AccountCreationDialog
+        visible={isAccountCreationVisible}
+        onClose={handleAccountCreationClose}
+        onConfirm={handleAccountCreationConfirm}
       />
       <ExportConfirmationDialog
         visible={isExportConfirmationVisible}
@@ -166,16 +220,24 @@ const HomeScreen: React.FC = () => {
         onCancel={() => setExportConfirmationVisible(false)}
         onClose={handleExportDialogClose}
       />
+      <CollectionDateDialog
+        visible={isCollectionDateDialogVisible}
+        onClose={handleCollectionDateDialogClose}
+        onConfirm={handleCollectionDateDialogConfirm}
+      />
     </View>
   );
 };
+
+export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EBF4F6',
+    padding: 30,
+    backgroundColor: '#fff',
   },
   logo: {
     width: 100,
@@ -183,34 +245,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 40,
-    color: '#0A154D',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   input: {
-    width: '80%',
+    width: '100%',
     marginBottom: 15,
   },
   startButton: {
-    width: '80%',
-    marginTop: 20,
+    width: '100%',
+    backgroundColor: '#0A154D',
     borderRadius: 5,
-    backgroundColor: '#071952',
+    marginBottom: 10,
   },
   startButtonText: {
     color: '#FFF',
   },
   adminButton: {
-    width: '80%',
-    marginTop: 10,
-    borderColor: '#071952',
+    width: '100%',
+    borderColor: '#0A154D',
     borderRadius: 5,
-    borderWidth: 2,
+    marginBottom: 10,
   },
   adminButtonText: {
-    color: '#071952',
+    color: '#0A154D',
   },
 });
-
-export default HomeScreen;

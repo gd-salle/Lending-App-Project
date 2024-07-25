@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Modal } from 'react-native';
 import { Button } from 'react-native-paper';
 import WarningConfirmationDialog from './WarningConfirmationDialog';
 
@@ -14,7 +14,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ visible, onConf
   const [warningVisible, setWarningVisible] = useState(false);
 
   const handleConfirm = () => {
-    setWarningVisible(true);
+    onClose(); // Close the current dialog
+    setWarningVisible(true); // Open the warning dialog
   };
 
   const handleWarningConfirm = () => {
@@ -45,12 +46,22 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ visible, onConf
             </Text>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={handleConfirm}>
-                <Text style={styles.buttonTextConfirm}>CONFIRM</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-                <Text style={styles.buttonTextCancel}>CANCEL</Text>
-              </TouchableOpacity>
+              <Button
+                mode="outlined"
+                onPress={onCancel}
+                style={styles.cancelButton}
+                labelStyle={styles.buttonTextCancel}
+              >
+                CANCEL
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleConfirm}
+                style={styles.confirmButton}
+                labelStyle={styles.buttonTextConfirm}
+              >
+                CONFIRM
+              </Button>
             </View>
           </View>
         </View>
@@ -110,19 +121,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
-  button: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 5,
-    marginHorizontal: 5,
-  },
   confirmButton: {
     backgroundColor: '#0A154D',
+    borderRadius: 5,
+    marginLeft: 5,
+    flex: 1,
   },
   cancelButton: {
     borderColor: '#0A154D',
-    borderWidth: 2,
+    borderRadius: 5,
+    marginRight: 5,
+    flex: 1,
   },
   buttonTextConfirm: {
     color: '#FFFFFF',

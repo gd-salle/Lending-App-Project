@@ -1,104 +1,108 @@
 import * as React from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
-import { Appbar, Card, Text, TextInput, Checkbox, Button, Divider, IconButton } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { View, StyleSheet, ScrollView} from 'react-native';
+import { Appbar, Card, Text, TextInput, Checkbox, Button, Divider} from 'react-native-paper';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import ConfirmationDialog from '../components/ConfirmationDialog';
+import { fetchPeriodDateById } from '../services/CollectiblesService';
+
+type RootStackParamList = {
+  Home: undefined;
+  Collectibles: undefined;
+  DataEntry: { item: Collectibles };
+};
+
+type DataEntryRouteProp = RouteProp<RootStackParamList, 'DataEntry'>;
+
+interface Collectibles {
+  account_number: number;
+  name: string;
+  remaining_balance: number;
+  due_date: string;
+  amount_paid: number;
+  daily_due: number;
+  is_printed: number;
+  period_id: number;
+}
 
 const DataEntry = () => {
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState(''); // State to track selected payment method
-    const [dueDate, setDueDate] = React.useState(new Date());
-    const [showDatePicker, setShowDatePicker] = React.useState(false);
-    const [isChequeNumberVisible, setChequeNumberVisible] = React.useState(false); // State to track cheque number visibility
-    const [dialogVisible, setDialogVisible] = React.useState(false); // State to manage dialog visibility
-    const navigation = useNavigation();
-  
-    const data = [
-      {
-        accountNumber: '661928875',
-        loanAmount: '₱ 12,700',
-        agentName: 'John Smith',
-        code: '12345',
-        address: 'Lorem Ipsum Dolor',
-        date: 'September 12, 2024',
-        tin: '123-456-789-000',
+  const route = useRoute<DataEntryRouteProp>();
+  const navigation = useNavigation();
+
+  const { item } = route.params; // Access the passed data
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState(''); // State to track selected payment method
+  const [isChequeNumberVisible, setChequeNumberVisible] = React.useState(false); // State to track cheque number visibility
+  const [dialogVisible, setDialogVisible] = React.useState(false); // State to manage dialog visibility
+  const [periodDate, setPeriodDate] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchPeriodDate = async () => {
+      try {
+        const date = await fetchPeriodDateById(item.period_id);
+        setPeriodDate(date);
+      } catch (error) {
+        console.error('Failed to fetch period date:', error);
       }
-    ];
-  
-    // Handler to update selected payment method and cheque number visibility
-    const handleCheckboxChange = (method: string) => {
-      setSelectedPaymentMethod(method);
-      setChequeNumberVisible(method === 'Cheque'); // Show cheque number input if Cheque is selected
     };
-  
-    // Function to format the date as YYYY-MM-DD
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-  
-    // Handler to update due date
-    const onChangeDueDate = (event: any, selectedDate?: Date) => {
-      const currentDate = selectedDate || dueDate;
-      setShowDatePicker(Platform.OS === 'ios');
-      setDueDate(currentDate);
-    };
-  
-    // Handlers for dialog actions
-    const handleConfirm = () => {
-      // Handle the confirm action
-      setDialogVisible(false);
-    };
-  
-    const handleCancel = () => {
-      // Handle the cancel action
-      setDialogVisible(false);
-    };
-  
-    const handleOpenDialog = () => {
-      setDialogVisible(true);
-    };
-  
+
+    fetchPeriodDate();
+  }, [item.period_id]);
+
+  // Handler to update selected payment method and cheque number visibility
+  const handleCheckboxChange = (method: string) => {
+    setSelectedPaymentMethod(method);
+    setChequeNumberVisible(method === 'Cheque'); // Show cheque number input if Cheque is selected
+  };
+
+  // Handlers for dialog actions
+  const handleConfirm = () => {
+    // Handle the confirm action
+    setDialogVisible(false);
+  };
+
+  const handleCancel = () => {
+    // Handle the cancel action
+    setDialogVisible(false);
+  };
+
+  const handleOpenDialog = () => {
+    setDialogVisible(true);
+  };
+
     return (
-      <>
+      <View style={{ flex: 1 }}>
         <Appbar.Header>
           <Appbar.BackAction onPress={() => navigation.goBack()} />
           <Appbar.Content title="Data Entry" />
         </Appbar.Header>
+        
         <ScrollView contentContainerStyle={styles.container}>
           <View>
-            {data.map((item, index) => (
-              <Card key={index} style={styles.card}>
+              <Card style={styles.card}>
                 <Card.Content>
                   <View style={styles.row}>
                     <Text style={styles.label}>Account Number</Text>
-                    <Text style={styles.label}>Loan Amount</Text>
+                    <Text style={styles.label}>Balance</Text>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.accountNumber}>{item.accountNumber}</Text>
-                    <Text style={styles.loanAmount}>{item.loanAmount}</Text>
+                    <Text style={styles.accountNumber}>{item.account_number}</Text>
+                    <Text style={styles.loanAmount}>₱ {item.remaining_balance}</Text>
                   </View>
                   <Divider style={{ padding: 2, marginTop: 5, marginBottom: 1 }} />
                   <View style={styles.row}>
-                    <Text style={styles.label}>Received From</Text>
-                    <Text style={styles.label}>Code</Text>
+                    <Text style={styles.label}>Account Name</Text>
+                    <Text style={styles.label}>Daily Due</Text>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.agentName}>{item.agentName}</Text>
-                    <Text style={styles.code}>{item.code}</Text>
+                    <Text style={styles.agentName}>{item.name}</Text>
+                    <Text style={styles.value}>₱ {item.daily_due}</Text>
                   </View>
-                  <Text style={styles.label}>Address</Text>
-                  <Text style={styles.value}>Lorem Ipsum Dolor</Text>
-                  <Text style={styles.label}>Date</Text>
-                  <Text style={styles.value}>September 12, 2024</Text>
-                  <Text style={styles.label}>Tax Identification Number</Text>
-                  <Text style={styles.value}>123-456-789-000</Text>
+                  <Text style={styles.label}>Due Date</Text>
+                  <Text style={styles.value}>{item.due_date}</Text>
                 </Card.Content>
               </Card>
-            ))}
           </View>
+          
           <Text style={styles.label}>Form of Payment</Text>
           <View style={styles.checkboxContainer}>
             <Checkbox
@@ -116,50 +120,35 @@ const DataEntry = () => {
           {isChequeNumberVisible && (
             <TextInput mode="flat" label="Cheque Number" style={styles.input} />
           )}
-          <TextInput mode="flat" label="Payment for" style={styles.input} />
-          <TextInput mode="flat" label="Amount to Pay" style={styles.input} />
-          <TextInput mode="flat" label="The Sum of" style={styles.input} />
-          <TextInput mode="flat" label="Discount" style={styles.input} />
-  
-          <View style={styles.dateInputContainer}>
+          
+          <View style={styles.dateContainer}>
             <TextInput
               mode="flat"
-              label="Due Date"
-              value={formatDate(dueDate)}
+              label="Date"
+              value={periodDate || 'Loading...'}
               style={[styles.input, { flex: 1 }]}
               editable={false}
             />
-            <IconButton
-              icon="calendar"
-              size={24}
-              onPress={() => setShowDatePicker(true)}
-            />
           </View>
+          
+          {/* <TextInput mode="flat" label="Payment for" style={styles.input} /> */}
+          <TextInput mode="flat" label="Amount Paid" style={styles.input} />
+          <TextInput mode="flat" label="The Sum of" style={styles.input} />
+          <TextInput mode="flat" label="Creditors Name" style={styles.input} />
+          {/* <TextInput mode="flat" label="By" style={styles.input} /> */}
   
-          {showDatePicker && (
-            <DateTimePicker
-              value={dueDate}
-              mode="date"
-              display="default"
-              onChange={onChangeDueDate}
-            />
-          )}
-  
-          <TextInput mode="flat" label="Conforme" style={styles.input} />
-          <TextInput mode="flat" label="By" style={styles.input} />
-  
-          <Button mode="contained" style={styles.button} onPress={handleOpenDialog}>
-            CONFIRM
-          </Button>
+          <ConfirmationDialog
+            visible={dialogVisible}
+            onConfirm={handleConfirm}
+            onCancel={handleCancel}
+            onClose={handleCancel}
+          />
         </ScrollView>
   
-        <ConfirmationDialog
-          visible={dialogVisible}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-          onClose={handleCancel}
-        />
-      </>
+        <Button mode="contained" style={styles.button} onPress={handleOpenDialog}>
+          CONFIRM
+        </Button>
+      </View>
     );
   };
   
@@ -190,11 +179,13 @@ const DataEntry = () => {
       color: '#0f2045',
     },
     agentName: {
+      fontWeight: 'bold',
       fontSize: 18,
       color: '#0f2045',
       lineHeight: 28,
     },
     code: {
+      fontWeight: 'bold',
       fontSize: 18,
       color: '#0f2045',
     },
@@ -207,8 +198,9 @@ const DataEntry = () => {
       color: '#000000',
     },
     value: {
+      fontWeight: 'bold',
       fontSize: 18,
-      marginBottom: 8,
+      color: '#0f2045',
     },
     input: {
       marginBottom: 12,
@@ -223,13 +215,13 @@ const DataEntry = () => {
       marginRight: 16,
     },
     button: {
-      marginTop: 10,
+      marginHorizontal: 16,
+      marginVertical: 10,
       backgroundColor: '#002B5B',
     },
-    dateInputContainer: {
+    dateContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 12,
     },
   });
   

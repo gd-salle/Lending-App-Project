@@ -7,30 +7,58 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { TextInput, Button } from 'react-native-paper';
+import { TextInput, Button, HelperText } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { getUser } from '../services/UserService';
+import { getAdmin } from '../services/UserService';
 
 interface AuthDialogProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: (username: string, password: string) => void;
-  isAgentAuth: boolean;
+  isConsultantAuth: boolean;
 }
 
-const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm, isAgentAuth }) => {
+const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm, isConsultantAuth }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (!visible) {
       setUsername('');
       setPassword('');
+      setUsernameError('');
+      setPasswordError('');
     }
   }, [visible]);
 
+  const validateFields = (): boolean => {
+    let isValid = true;
+
+    if (username.trim().length === 0) {
+      setUsernameError('Username is required');
+      isValid = false;
+    } else {
+      setUsernameError('');
+    }
+
+    if (password.trim().length === 0) {
+      setPasswordError('Password is required');
+      isValid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    return isValid;
+  };
+
   const handleConfirm = async () => {
-    const user = await getUser(username, password);
+    if (!validateFields()) {
+      return;
+    }
+
+    const user = await getAdmin(username, password);
     if (user) {
       onConfirm(username, password);
       setUsername('');
@@ -55,19 +83,22 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm, is
           <View style={styles.titleContainer}>
             <View style={styles.verticalLine} />
             <Text style={styles.title}>
-              {isAgentAuth ? 'This action requires an Agent Authentication' : 'This action requires an Admin Authentication'}
+              {isConsultantAuth ? 'This action requires an Consultant Authentication' : 'This action requires an Admin Authentication'}
             </Text>
           </View>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <Ionicons name="close" size={24} color="black" />
           </TouchableOpacity>
+          {usernameError ? <HelperText type="error">{usernameError}</HelperText> : null}
           <TextInput
             label="Username"
             value={username}
             onChangeText={setUsername}
             mode="outlined"
             style={styles.input}
+            error={!!usernameError}
           />
+          {passwordError ? <HelperText type="error">{passwordError}</HelperText> : null}
           <TextInput
             label="Password"
             secureTextEntry
@@ -75,6 +106,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm, is
             onChangeText={setPassword}
             mode="outlined"
             style={styles.input}
+            error={!!passwordError}
           />
           <Button
             mode="contained"

@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   dialog: {
-    width: 300,
+    width: 350,
     padding: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 14,
     color: '#0A154D',
-    textAlign: 'center',
+    textAlign: 'auto',
     marginBottom: 10,
   },
   subMessage: {

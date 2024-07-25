@@ -14,6 +14,7 @@ interface AdminToolsDialogProps {
   onClose: () => void;
   onImport: () => void;
   onExport: () => void;
+  onCreateAccount: () => void;
 }
 
 const AdminToolsDialog: React.FC<AdminToolsDialogProps> = ({
@@ -21,6 +22,7 @@ const AdminToolsDialog: React.FC<AdminToolsDialogProps> = ({
   onClose,
   onImport,
   onExport,
+  onCreateAccount,
 }) => {
   return (
     <Modal transparent={true} visible={visible} animationType="fade">
@@ -49,6 +51,14 @@ const AdminToolsDialog: React.FC<AdminToolsDialogProps> = ({
           >
             EXPORT COLLECTIONS
           </Button>
+          <Button
+            mode="outlined"
+            onPress={onCreateAccount}
+            style={styles.exportButton}
+            labelStyle={styles.buttonTextOutlined}
+          >
+            CREATE CONSULTANT ACCOUNT
+          </Button>
         </View>
       </View>
     </Modal>
@@ -67,8 +77,7 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#EBF4F6',
     borderRadius: 10,
-    alignItems: 'flex-start',
-    position: 'relative',
+    alignItems: 'center', // Center all content horizontally
   },
   titleContainer: {
     flexDirection: 'row',
@@ -97,7 +106,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A154D',
     borderRadius: 5,
     marginTop: 20,
-    marginBottom: 10,
   },
   exportButton: {
     width: '100%',
@@ -111,6 +119,16 @@ const styles = StyleSheet.create({
   },
   buttonTextOutlined: {
     color: '#0A154D',
+  },
+  createAccountText: {
+    color: '#0A154D',
+    textDecorationLine: 'underline',
+    fontWeight: 'bold',
+  },
+  centeredButton: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 20,
   },
 });
 
