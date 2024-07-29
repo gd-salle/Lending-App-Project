@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, View, Text, Modal, TouchableOpacity } from 'react-native';
-import { Button } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ExportConfirmationDialogProps {

@@ -1,9 +1,9 @@
-import * as React from 'react';
-import { View, StyleSheet, ScrollView} from 'react-native';
-import { Appbar, Card, Text, TextInput, Checkbox, Button, Divider} from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { Appbar, Card, Text, TextInput, Checkbox, Button, Divider } from 'react-native-paper';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import ConfirmationDialog from '../components/ConfirmationDialog';
-import { fetchPeriodDateById } from '../services/CollectiblesService';
+import { fetchPeriodDateById, numberToWords } from '../services/CollectiblesService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -30,12 +30,17 @@ const DataEntry = () => {
 
   const { item } = route.params; // Access the passed data
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState(''); // State to track selected payment method
-  const [isChequeNumberVisible, setChequeNumberVisible] = React.useState(false); // State to track cheque number visibility
-  const [dialogVisible, setDialogVisible] = React.useState(false); // State to manage dialog visibility
-  const [periodDate, setPeriodDate] = React.useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+  const [isChequeNumberVisible, setChequeNumberVisible] = useState(false);
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [amountPaid, setAmountPaid] = useState('');
+  const [sumOf, setSumOf] = useState('');
+  const [creditorsName, setCreditorsName] = useState('');
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [periodDate, setPeriodDate] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchPeriodDate = async () => {
       try {
         const date = await fetchPeriodDateById(item.period_id);
@@ -48,111 +53,201 @@ const DataEntry = () => {
     fetchPeriodDate();
   }, [item.period_id]);
 
-  // Handler to update selected payment method and cheque number visibility
   const handleCheckboxChange = (method: string) => {
     setSelectedPaymentMethod(method);
-    setChequeNumberVisible(method === 'Cheque'); // Show cheque number input if Cheque is selected
+    setChequeNumberVisible(method === 'Cheque');
+    setErrors(prevErrors => ({ ...prevErrors, selectedPaymentMethod: '' }));
   };
 
-  // Handlers for dialog actions
+  const validateForm = () => {
+    let valid = true;
+    let newErrors: { [key: string]: string } = {};
+
+    if (!selectedPaymentMethod) {
+      newErrors.selectedPaymentMethod = 'Please select a payment method.';
+      valid = false;
+    }
+    if (selectedPaymentMethod === 'Cheque' && !chequeNumber) {
+      newErrors.chequeNumber = 'Please enter the cheque number.';
+      valid = false;
+    }
+    if (!amountPaid) {
+      newErrors.amountPaid = 'Please enter the amount paid.';
+      valid = false;
+    }
+    if (!sumOf) {
+      newErrors.sumOf = 'Please enter the sum of.';
+      valid = false;
+    }
+    if (!creditorsName) {
+      newErrors.creditorsName = 'Please enter the creditor\'s name.';
+      valid = false;
+    }
+
+    setErrors(newErrors);
+    return valid;
+  };
+
   const handleConfirm = () => {
-    // Handle the confirm action
-    setDialogVisible(false);
+    if (validateForm()) {
+      setDialogVisible(false);
+      // Handle the confirm action
+    } else {
+      Alert.alert('Validation Error', 'Please fill in all required fields.');
+    }
   };
 
   const handleCancel = () => {
-    // Handle the cancel action
     setDialogVisible(false);
   };
 
   const handleOpenDialog = () => {
-    setDialogVisible(true);
+    if (validateForm()) {
+      setDialogVisible(true);
+    } else {
+      Alert.alert('Validation Error', 'Please fill in all required fields.');
+    }
   };
 
-    return (
-      <View style={{ flex: 1 }}>
-        <Appbar.Header>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Data Entry" />
-        </Appbar.Header>
-        
-        <ScrollView contentContainerStyle={styles.container}>
-          <View>
-              <Card style={styles.card}>
-                <Card.Content>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Account Number</Text>
-                    <Text style={styles.label}>Balance</Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.accountNumber}>{item.account_number}</Text>
-                    <Text style={styles.loanAmount}>₱ {item.remaining_balance}</Text>
-                  </View>
-                  <Divider style={{ padding: 2, marginTop: 5, marginBottom: 1 }} />
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Account Name</Text>
-                    <Text style={styles.label}>Daily Due</Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.agentName}>{item.name}</Text>
-                    <Text style={styles.value}>₱ {item.daily_due}</Text>
-                  </View>
-                  <Text style={styles.label}>Due Date</Text>
-                  <Text style={styles.value}>{item.due_date}</Text>
-                </Card.Content>
-              </Card>
-          </View>
-          
-          <Text style={styles.label}>Form of Payment</Text>
-          <View style={styles.checkboxContainer}>
-            <Checkbox
-              status={selectedPaymentMethod === 'Cash' ? 'checked' : 'unchecked'}
-              onPress={() => handleCheckboxChange('Cash')}
-            />
-            <Text style={styles.checkboxLabel}>Cash</Text>
-            <Checkbox
-              status={selectedPaymentMethod === 'Cheque' ? 'checked' : 'unchecked'}
-              onPress={() => handleCheckboxChange('Cheque')}
-            />
-            <Text style={styles.checkboxLabel}>Cheque</Text>
-          </View>
-  
-          {isChequeNumberVisible && (
-            <TextInput mode="flat" label="Cheque Number" style={styles.input} />
-          )}
-          
-          <View style={styles.dateContainer}>
-            <TextInput
-              mode="flat"
-              label="Date"
-              value={periodDate || 'Loading...'}
-              style={[styles.input, { flex: 1 }]}
-              editable={false}
-            />
-          </View>
-          
-          {/* <TextInput mode="flat" label="Payment for" style={styles.input} /> */}
-          <TextInput mode="flat" label="Amount Paid" style={styles.input} />
-          <TextInput mode="flat" label="The Sum of" style={styles.input} />
-          <TextInput mode="flat" label="Creditors Name" style={styles.input} />
-          {/* <TextInput mode="flat" label="By" style={styles.input} /> */}
-  
-          <ConfirmationDialog
-            visible={dialogVisible}
-            onConfirm={handleConfirm}
-            onCancel={handleCancel}
-            onClose={handleCancel}
-          />
-        </ScrollView>
-  
-        <Button mode="contained" style={styles.button} onPress={handleOpenDialog}>
-          CONFIRM
-        </Button>
-      </View>
-    );
+  const handleAmountPaidChange = (value: string) => {
+    setAmountPaid(value);
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue)) {
+      setSumOf(numberToWords(numericValue));
+    } else {
+      setSumOf('');
+    }
   };
-  
-  const styles = StyleSheet.create({
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Appbar.Header>
+        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.Content title="Data Entry" />
+      </Appbar.Header>
+      
+      <ScrollView contentContainerStyle={styles.container}>
+        <View>
+            <Card style={styles.card}>
+              <Card.Content>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Account Number</Text>
+                  <Text style={styles.label}>Balance</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.accountNumber}>{item.account_number}</Text>
+                  <Text style={styles.loanAmount}>₱ {item.remaining_balance}</Text>
+                </View>
+                <Divider style={{ padding: 2, marginTop: 5, marginBottom: 1 }} />
+                <View style={styles.row}>
+                  <Text style={styles.label}>Account Name</Text>
+                  <Text style={styles.label}>Daily Due</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.agentName}>{item.name}</Text>
+                  <Text style={styles.value}>₱ {item.daily_due}</Text>
+                </View>
+                <Text style={styles.label}>Due Date</Text>
+                <Text style={styles.value}>{item.due_date}</Text>
+              </Card.Content>
+            </Card>
+        </View>
+        
+        <Text style={styles.label}>Form of Payment</Text>
+        <View style={styles.checkboxContainer}>
+          <Checkbox
+            status={selectedPaymentMethod === 'Cash' ? 'checked' : 'unchecked'}
+            onPress={() => handleCheckboxChange('Cash')}
+          />
+          <Text style={styles.checkboxLabel}>Cash</Text>
+          <Checkbox
+            status={selectedPaymentMethod === 'Cheque' ? 'checked' : 'unchecked'}
+            onPress={() => handleCheckboxChange('Cheque')}
+          />
+          <Text style={styles.checkboxLabel}>Cheque</Text>
+        </View>
+        {errors.selectedPaymentMethod ? (
+          <Text style={styles.errorText}>{errors.selectedPaymentMethod}</Text>
+        ) : null}
+
+        {isChequeNumberVisible && (
+          <TextInput
+            mode="flat"
+            label="Cheque Number"
+            style={styles.input}
+            value={chequeNumber}
+            onChangeText={setChequeNumber}
+            error={!!errors.chequeNumber}
+            keyboardType="numeric"
+          />
+        )}
+        {errors.chequeNumber ? (
+          <Text style={styles.errorText}>{errors.chequeNumber}</Text>
+        ) : null}
+
+        <View style={styles.dateContainer}>
+          <TextInput
+            mode="flat"
+            label="Date"
+            value={periodDate || 'Loading...'}
+            style={[styles.input, { flex: 1 }]}
+            editable={false}
+          />
+        </View>
+
+        <TextInput
+          mode="flat"
+          label="Amount Paid"
+          style={styles.input}
+          value={amountPaid}
+          onChangeText={handleAmountPaidChange}
+          error={!!errors.amountPaid}
+          keyboardType="numeric"
+        />
+        {errors.amountPaid ? (
+          <Text style={styles.errorText}>{errors.amountPaid}</Text>
+        ) : null}
+
+        <TextInput
+          mode="flat"
+          label="The Sum of"
+          style={styles.input}
+          value={sumOf}
+          onChangeText={setSumOf}
+          editable={false}
+          error={!!errors.sumOf}
+        />
+        {errors.sumOf ? (
+          <Text style={styles.errorText}>{errors.sumOf}</Text>
+        ) : null}
+
+        <TextInput
+          mode="flat"
+          label="Creditor's Name"
+          style={styles.input}
+          value={creditorsName}
+          onChangeText={setCreditorsName}
+          error={!!errors.creditorsName}
+        />
+        {errors.creditorsName ? (
+          <Text style={styles.errorText}>{errors.creditorsName}</Text>
+        ) : null}
+
+        <ConfirmationDialog
+          visible={dialogVisible}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+          onClose={handleCancel}
+        />
+      </ScrollView>
+
+      <Button mode="contained" style={styles.button} onPress={handleOpenDialog}>
+        PRINT RECEIPT
+      </Button>
+    </View>
+  );
+};
+const styles = StyleSheet.create({
     container: {
       padding: 16,
       backgroundColor: '#F2F5FA',
@@ -222,6 +317,10 @@ const DataEntry = () => {
     dateContainer: {
       flexDirection: 'row',
       alignItems: 'center',
+    },
+    errorText: {
+      color: 'red',
+      marginBottom: 8,
     },
   });
   

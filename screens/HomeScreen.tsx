@@ -10,7 +10,7 @@ import CollectionDateDialog from '../components/CollectionDateDialog';
 import { handleImport } from '../services/FileService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { getConsultantInfo } from '../services/UserService';
-import { fetchAllPeriods, fetchLatestPeriodDate } from '../services/CollectiblesService';
+import { fetchAllPeriods, fetchLatestPeriodDate, fetchLatestPeriodID, exportCollectibles } from '../services/CollectiblesService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -35,32 +35,36 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   useEffect(() => {
-    const fetchConsultantInfo = async () => {
-      try {
-        const consultantInfo = await getConsultantInfo();
-        if (consultantInfo) {
-          setConsultant(consultantInfo.name);
-          setArea(consultantInfo.area);
-        }
-      } catch (error) {
-        console.error('Failed to fetch consultant info:', error);
-      }
+    const fetchData = async () => {
+      await fetchConsultantInfo();
+      await fetchAndSetLatestPeriodDate();
     };
 
-    const fetchAndSetLatestPeriodDate = async () => {
-      try {
-        const latestDate = await fetchLatestPeriodDate();
-        if (latestDate) {
-          setCollectionDate(latestDate);
-        }
-      } catch (error) {
-        console.error('Failed to fetch latest period date:', error);
-      }
-    };
-
-    fetchConsultantInfo();
-    fetchAndSetLatestPeriodDate();
+    fetchData();
   }, []);
+
+  const fetchConsultantInfo = async () => {
+    try {
+      const consultantInfo = await getConsultantInfo();
+      if (consultantInfo) {
+        setConsultant(consultantInfo.name);
+        setArea(consultantInfo.area);
+      }
+    } catch (error) {
+      console.error('Failed to fetch consultant info:', error);
+    }
+  };
+
+  const fetchAndSetLatestPeriodDate = async () => {
+    try {
+      const latestDate = await fetchLatestPeriodDate();
+      if (latestDate) {
+        setCollectionDate(latestDate || '');
+      }
+    } catch (error) {
+      console.error('Failed to fetch latest period date:', error);
+    }
+  };
 
   const handleStartCollection = () => {
     setAuthAction('consultant');
@@ -95,15 +99,29 @@ const HomeScreen: React.FC = () => {
     setDialogVisible(false);
   };
 
-  const handleExport = async () => {
-    try {
-      const fileUri = true;
-      Alert.alert('Success', `Data exported to ${fileUri}`);
-    } catch (e) {
-      console.log(e);
-      Alert.alert('Error', 'Failed to export data');
+const handleExport = async () => {
+  try {
+    const latestPeriod = await fetchLatestPeriodID();
+    if (latestPeriod && latestPeriod.period_id) {
+      await exportCollectibles(latestPeriod.period_id);
+      Alert.alert('Success', `Data exported for period ID ${latestPeriod.period_id}`);
+    } else {
+      Alert.alert('Error', 'No period found to export');
     }
-  };
+  } catch (e: unknown) {
+    let msg: string;
+    if (e instanceof Error) {
+      msg = e.message;
+    } else {
+      // Handle case where `e` is not an instance of Error
+      msg = 'An unknown error occurred';
+    }
+    Alert.alert('Error', msg || 'Failed to export data');
+  }
+};
+
+  
+  
 
   const confirmExport = async () => {
     setExportConfirmationVisible(false);
@@ -125,18 +143,27 @@ const HomeScreen: React.FC = () => {
     setAccountCreationVisible(false);
   };
 
-  const handleAccountCreationConfirm = (consultantName: string, area: string, username: string, password: string) => {
-    // Handle account creation logic
-    console.log('New Account:', { consultantName, area, username, password });
-    setAccountCreationVisible(false);
+  const handleAccountCreationConfirm = async (consultantName: string, area: string, username: string, password: string) => {
+    try {
+      console.log('New Account:', { consultantName, area, username, password });
+      await fetchConsultantInfo();
+      setAdminToolsVisible(true);
+      setAccountCreationVisible(false);
+    } catch (error) {
+      console.error('Error adding consultant:', error);
+    }
   };
 
   const handleCollectionDateDialogClose = () => {
     setCollectionDateDialogVisible(false);
   };
 
-  const handleCollectionDateDialogConfirm = (date: string) => {
+  const handleCollectionDateDialogConfirm = async (date: string) => {
     setCollectionDate(date);
+    const importSuccessful = await handleImport(date);
+    if (!importSuccessful) {
+      setCollectionDate(''); // Reset collection date if import failed
+    }
     setCollectionDateDialogVisible(false);
     pendingAction();
   };
@@ -203,7 +230,9 @@ const HomeScreen: React.FC = () => {
         visible={isAdminToolsVisible}
         onClose={() => setAdminToolsVisible(false)}
         onImport={() => {
-          setPendingAction(() => () => handleImport(collectionDate));
+          setPendingAction(() => () => {
+            // Perform any additional actions after successful import
+          });
           setCollectionDateDialogVisible(true);
         }}
         onExport={() => setExportConfirmationVisible(true)}

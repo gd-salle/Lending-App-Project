@@ -9,26 +9,24 @@ import {
 } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-// import { addConsultant } from '../services/UserService';
 import { addConsultant } from '../services/UserService';
 
 interface AccountCreationDialogProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (consultantName: string, area: string, username: string, password: string) => void;
+  onConfirm: (consultantName: string, area: string, admin_passcode: string, password: string) => void;
 }
 
 const AccountCreationDialog: React.FC<AccountCreationDialogProps> = ({ visible, onClose, onConfirm }) => {
   const [consultantName, setConsultantName] = useState('');
   const [area, setArea] = useState('');
-  const [username, setUsername] = useState('');
+  const [admin_passcode, setAdminPasscode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-
   const [consultantNameError, setConsultantNameError] = useState('');
   const [areaError, setAreaError] = useState('');
-  const [usernameError, setUsernameError] = useState('');
+  const [adminPasscodeError, setAdminPasscodeError] = useState('');
   const [passwordInputError, setPasswordInputError] = useState('');
   const [confirmPasswordInputError, setConfirmPasswordInputError] = useState('');
 
@@ -36,13 +34,13 @@ const AccountCreationDialog: React.FC<AccountCreationDialogProps> = ({ visible, 
     if (!visible) {
       setConsultantName('');
       setArea('');
-      setUsername('');
+      setAdminPasscode('');
       setPassword('');
       setConfirmPassword('');
       setPasswordError('');
       setConsultantNameError('');
       setAreaError('');
-      setUsernameError('');
+      setAdminPasscodeError('');
       setPasswordInputError('');
       setConfirmPasswordInputError('');
     }
@@ -61,14 +59,11 @@ const AccountCreationDialog: React.FC<AccountCreationDialogProps> = ({ visible, 
       isValid = false;
     }
 
-    if (!username) {
-      setUsernameError('Username is required');
-      isValid = false;
-    } else if (username.length <= 8) {
-      setUsernameError('Username must be more than 8 characters');
+    if (!admin_passcode) {
+      setAdminPasscodeError('Admin Passcode is required');
       isValid = false;
     } else {
-      setUsernameError('');
+      setAdminPasscodeError('');
     }
 
     if (!password) {
@@ -95,10 +90,10 @@ const AccountCreationDialog: React.FC<AccountCreationDialogProps> = ({ visible, 
       try {
         console.log('Consultant Name:', consultantName);
         console.log('Area:', area);
-        console.log('Username:', username);
+        console.log('Admin Passcode:', admin_passcode);
         console.log('Password:', password);
-        await addConsultant(consultantName, username ,password, area);
-        onConfirm(consultantName, username, password, area);
+        await addConsultant(consultantName, admin_passcode ,password, area);
+        onConfirm(consultantName, admin_passcode, password, area);
         onClose();
       } catch (error) {
         console.error('Error adding consultant:', error);
@@ -141,17 +136,17 @@ const AccountCreationDialog: React.FC<AccountCreationDialogProps> = ({ visible, 
             style={styles.input}
             error={!!areaError}
           />
-          {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
+          {adminPasscodeError ? <Text style={styles.errorText}>{adminPasscodeError}</Text> : null}
           <TextInput
-            label="Username"
-            value={username}
+            label="Admin Passcode"
+            value={admin_passcode}
             onChangeText={(text) => {
-              setUsername(text);
-              if (text) setUsernameError('');
+              setAdminPasscode(text);
+              if (text) setAdminPasscodeError('');
             }}
             mode="outlined"
             style={styles.input}
-            error={!!usernameError}
+            error={!!adminPasscodeError}
           />
           {passwordInputError ? <Text style={styles.errorText}>{passwordInputError}</Text> : null}
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}

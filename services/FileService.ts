@@ -2,7 +2,7 @@ import { openDatabase } from "./Database";
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { Alert } from 'react-native';
-import { fetchLatestPeriodID } from './CollectiblesService';
+import { storePeriodDate} from './CollectiblesService';
 
 // Function to insert collectibles data into the database
 export const insertCollectiblesIntoDatabase = async (entry: { [key: string]: string }) => {
@@ -14,18 +14,31 @@ export const insertCollectiblesIntoDatabase = async (entry: { [key: string]: str
       [account_number, name, parseFloat(remaining_balance), due_date, parseFloat(amount_paid), parseFloat(daily_due), is_printed, period_id]
     );
   } catch (error) {
-    console.error('Error inserting account data into the database:', error);
+    console.error('Error inserting collectibles data into the database:', error);
   }
 };
 
 // Function to handle import of CSV file
 export const handleImport = async (selectedCollectionDate: string) => {
+  console.log('Starting handleImport');
+  
   const result = await DocumentPicker.getDocumentAsync({
     type: 'text/comma-separated-values',
     copyToCacheDirectory: true
   });
+
+  console.log('Document picker result:', result);
+
+  if (result.canceled) {
+    console.log('Document picker canceled');
+    return;
+  }
+
   const assets = result.assets;
-  if (!assets) return;
+  if (!assets) {
+    console.log('No assets found');
+    return false;
+  }
 
   const file = assets[0];
   const csvFile = {
@@ -33,19 +46,29 @@ export const handleImport = async (selectedCollectionDate: string) => {
     uri: file.uri,
     mimetype: file.mimeType,
     size: file.size,
-  }
+  };
 
-  // if (csvFile.mimetype === 'text/comma-separated-values') return;
+  console.log('Selected file:', csvFile);
+
+  // Store the date only if the user proceeds with the file
+  const periodID = await storePeriodDate(selectedCollectionDate);
+
+  console.log('Period ID:', periodID);
+
   try {
     const content = await FileSystem.readAsStringAsync(csvFile.uri);
-    await processCSVContent(content, selectedCollectionDate);
+    await processCSVContent(content, selectedCollectionDate, periodID);
+    console.log('File processed successfully');
+    return true;
   } catch (e) {
-    console.log(e);
+    console.log('Error reading file:', e);
     Alert.alert('Error', 'Failed to read file');
+    return false;
   }
 };
 
-const processCSVContent = async (content: string, selectedCollectionDate: string) => {
+
+const processCSVContent = async (content: string, selectedCollectionDate: string, periodID: number) => {
   const requiredHeaders = [
     'account_number', 'name', 'remaining_balance', 'due_date',
     'amount_paid', 'daily_due', 'is_printed', 'period_id'
@@ -58,7 +81,7 @@ const processCSVContent = async (content: string, selectedCollectionDate: string
   }
 
   const headers = rows[0].split(',').map(header => header.trim());
-  
+
   // Verify that the headers contain all required headers
   const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
   if (missingHeaders.length > 0) {
@@ -74,12 +97,9 @@ const processCSVContent = async (content: string, selectedCollectionDate: string
     }, {} as { [key: string]: string });
   });
 
-  const latestPeriod = await fetchLatestPeriodID();
-  const latestPeriodID = latestPeriod.period_id;
-
   for (const entry of data) {
     if (entry['period_id'] === '0') {
-      entry['period_id'] = latestPeriodID.toString();
+      entry['period_id'] = periodID.toString();
     }
     await insertCollectiblesIntoDatabase(entry);
   }

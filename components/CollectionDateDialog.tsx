@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Modal, Platform } from 'react
 import { TextInput, Button, IconButton } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { storePeriodDate, fetchLatestPeriodID } from '../services/CollectiblesService'; // Import the service functions
+import { fetchLatestPeriodID } from '../services/CollectiblesService'; // Import the service functions
 
 interface CollectionDateDialogProps {
   visible: boolean;
@@ -35,7 +35,7 @@ const CollectionDateDialog: React.FC<CollectionDateDialogProps> = ({
   const handleConfirm = async () => {
     const formattedDate = formatDate(date);
     try {
-      await storePeriodDate(formattedDate); // Store the date in the database
+      // await storePeriodDate(formattedDate);
       onConfirm(formattedDate); // Call the onConfirm prop with the formatted date
       onClose(); // Close the dialog
       const periodData = await fetchLatestPeriodID(); // Fetch and log the period data

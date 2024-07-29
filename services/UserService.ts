@@ -1,5 +1,4 @@
 import { openDatabase} from './Database';
-import * as SQLite from 'expo-sqlite';
 
 export const getAdmin = async (username: string, password: string) => {
   try{
@@ -25,7 +24,7 @@ export const getConsultant = async (username: string, password: string) => {
     return user;
   } catch (error) {
     console.error('Error in getConsultant:', error);
-    throw error; // rethrowing the error for upper layers to handle
+    throw error;
   }
 };
 
@@ -59,14 +58,14 @@ export const getConsultantInfo = async ()=> {
 };
 
 // Add a new consultant to the database
-export const addConsultant = async (name: string, username: string, password: string, area: string) => {
+export const addConsultant = async (name: string, username: string, admin_passcode: string, area: string) => {
   try {
     const db = await openDatabase();
     console.log('Database connection established for adding consultant');
 
     await db.runAsync(
-      'INSERT INTO consultant (name, username, password, area) VALUES (?, ?, ?, ?)',
-      [name, username, password, area]
+      'INSERT INTO consultant (name, admin_passcode, password, area) VALUES (?, ?, ?, ?)',
+      [name, username, admin_passcode, area]
     );
 
     console.log('Consultant added successfully');

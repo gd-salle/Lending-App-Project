@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-const databaseName = 'eclc_16.db';
+const databaseName = 'eclc_20.db';
 
 export const openDatabase = async () => {
   try {
@@ -15,7 +15,6 @@ export const openDatabase = async () => {
     `);
     console.log('Tables check result:', tablesCheck);
     if (tablesCheck.length === 4) {
-      // All tables exist, no need to create them
       return db;
     }
 
@@ -33,7 +32,7 @@ export const openDatabase = async () => {
       CREATE TABLE IF NOT EXISTS consultant (
         consultant_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         name TEXT NOT NULL,
-        username TEXT NOT NULL,
+        admin_passcode TEXT NOT NULL,
         password TEXT NOT NULL,
         area TEXT NOT NULL
       );

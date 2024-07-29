@@ -104,10 +104,10 @@ const Collectibles: React.FC = () => {
                     <Text style={styles.dueDate}>{item.due_date}</Text>
                   </View>
 
-                  <View style={styles.detailsColumn}>
+                  {/* <View style={styles.detailsColumn}>
                     <Text style={styles.label}>Status</Text>
                     <Text style={[styles.status, { color: getStatusColor(item.period_id) }]}>{item.period_id}</Text>
-                  </View>
+                  </View> */}
 
                   <View style={styles.detailsColumn}>
                     {/* <Text style={[styles.label, { color: getStatusColor(item.status) }]}>Status</Text>
