@@ -3,34 +3,62 @@ import {
   StyleSheet,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Modal,
-  TouchableWithoutFeedback,
   Alert,
 } from 'react-native';
+import { TextInput, Button, HelperText } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { getUser } from '../services/UserService';
+import { getAdmin } from '../services/UserService';
 
 interface AuthDialogProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: (username: string, password: string) => void;
+  isConsultantAuth: boolean;
 }
 
-const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm }) => {
+const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm, isConsultantAuth }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (!visible) {
       setUsername('');
       setPassword('');
+      setUsernameError('');
+      setPasswordError('');
     }
   }, [visible]);
 
+  const validateFields = (): boolean => {
+    let isValid = true;
+
+    if (username.trim().length === 0) {
+      setUsernameError('Username is required');
+      isValid = false;
+    } else {
+      setUsernameError('');
+    }
+
+    if (password.trim().length === 0) {
+      setPasswordError('Password is required');
+      isValid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    return isValid;
+  };
+
   const handleConfirm = async () => {
-    const user = await getUser(username, password);
+    if (!validateFields()) {
+      return;
+    }
+
+    const user = await getAdmin(username, password);
     if (user) {
       onConfirm(username, password);
       setUsername('');
@@ -50,34 +78,46 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ visible, onClose, onConfirm }) 
 
   return (
     <Modal transparent={true} visible={visible} animationType="fade">
-      <TouchableWithoutFeedback onPress={handleClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.dialog}>
-              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                <Ionicons name="close" size={24} color="black" />
-              </TouchableOpacity>
-              <Text style={styles.title}>This action requires a User Authentication</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity style={styles.button} onPress={handleConfirm}>
-                <Text style={styles.buttonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableWithoutFeedback>
+      <View style={styles.overlay}>
+        <View style={styles.dialog}>
+          <View style={styles.titleContainer}>
+            <View style={styles.verticalLine} />
+            <Text style={styles.title}>
+              {isConsultantAuth ? 'This action requires an Consultant Authentication' : 'This action requires an Admin Authentication'}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <Ionicons name="close" size={24} color="black" />
+          </TouchableOpacity>
+          {usernameError ? <HelperText type="error">{usernameError}</HelperText> : null}
+          <TextInput
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            mode="outlined"
+            style={styles.input}
+            error={!!usernameError}
+          />
+          {passwordError ? <HelperText type="error">{passwordError}</HelperText> : null}
+          <TextInput
+            label="Password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            mode="outlined"
+            style={styles.input}
+            error={!!passwordError}
+          />
+          <Button
+            mode="contained"
+            onPress={handleConfirm}
+            style={styles.button}
+            labelStyle={styles.buttonText}
+          >
+            CONFIRM
+          </Button>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };
@@ -90,42 +130,47 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   dialog: {
-    width: 300,
+    width: 350,
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#EBF4F6',
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     position: 'relative',
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  verticalLine: {
+    width: 10,
+    height: '100%',
+    backgroundColor: '#0A154D',
+    marginRight: 10,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0A154D',
+    flexShrink: 1,
   },
   closeButton: {
     position: 'absolute',
     top: 10,
     right: 10,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
   input: {
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
     marginBottom: 15,
   },
   button: {
-    backgroundColor: '#D3D3D3',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    width: '100%',
+    backgroundColor: '#0A154D',
     borderRadius: 5,
+    marginBottom: 10,
   },
   buttonText: {
-    color: '#000',
-    fontSize: 16,
-    textAlign: 'center',
+    color: '#FFF',
   },
 });
 
